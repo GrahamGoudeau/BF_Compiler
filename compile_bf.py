@@ -6,29 +6,33 @@ import re
 operators = ['+', '-', '<', '>', '[', ']', '.', ',', '\n', '\t', ' ']
 comment = '#'
 
-
 OUT_FILE_NAME = ""
 
-ARR_SIZE = 10000
+ARR_SIZE = 30000
+
+C_SIG = False
 
 # return the open file, or exit if problem with file
 #def setup():
 def print_usage():
-    print("Usage:\tcompile.py [input_file.bf] [desired output name]")
-    print("Flags:\n\t-rs=# [set mem tape size; default 10000]")
-    print("\t-other flags")
+    print("Usage:\tcompile.py [input_file.bf] [desired output name] [-flags]")
+    print("Flags:\t-rs=# [set mem tape size; default {0}]".format(ARR_SIZE))
+    print("\t-c [preserve c code output]")
     sys.exit()
 
 def set_options():
     global OUT_FILE_NAME
     global ARR_SIZE
+    global C_SIG
     if len(sys.argv) < 3: 
         print_usage()
     if sum(map(num_bf_files, sys.argv)) != 1:
         print_usage()
 
-    # search for array size flag; set ARR_SIZE accordingly
+    # set mem tape size and c preservation flag
     for arg in sys.argv:
+        if arg == "-c":
+            C_SIG = True
         size_regex = re.search(r'-rs=([0-9]+)', arg)
         try:
             # the integer is in re.group(1)
@@ -53,7 +57,8 @@ def get_out_file_name():
     global OUT_FILE_NAME
     for arg in sys.argv:
         if arg != sys.argv[0] and not ('.' in arg) and not ('=' in arg):
-            OUT_FILE_NAME = arg
+            if arg != '-c':
+                OUT_FILE_NAME = arg
 
 # return 1 on .bf file, 0 otherwise
 def num_bf_files(option):
@@ -153,7 +158,7 @@ def syntax_valid(code):
 def compile(code):
     global ARR_SIZE 
     c_file_name = OUT_FILE_NAME + '.c'
-    out_file = open(c_file_name, 'wr')
+    out_file = open(c_file_name, 'w')
 
     write_header(out_file)
 
@@ -167,7 +172,8 @@ def compile(code):
     gcc_compile(out_file, c_file_name)
 
     # remove leftover c file
-    os.remove(c_file_name)
+    if not C_SIG:
+        os.remove(c_file_name)
 
 def gcc_compile(out_file, c_file_name):
     cmd = ["gcc", "-O0", "-g", c_file_name, "-o", OUT_FILE_NAME]
